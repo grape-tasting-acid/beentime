@@ -1,0 +1,83 @@
+.dataSorterIcon,
+.logicalOperatorChild {
+  position: absolute;
+  margin: 0 !important;
+  top: 0;
+}
+.logicalOperatorChild {
+  height: 100%;
+  width: 100%;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background-color: var(--color-orangered-200);
+}
+.dataSorterIcon {
+  height: 1px;
+  width: 1334px;
+  left: -171px;
+  flex-shrink: 0;
+  z-index: 3;
+}
+.div {
+  color: var(--color-darkslategray-100);
+}
+.div,
+.div1 {
+  width: 20px;
+  position: relative;
+  letter-spacing: -0.01em;
+  line-height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  z-index: 1;
+}
+.dataFilter {
+  width: 75px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+.div2 {
+  width: 20px;
+  position: relative;
+  letter-spacing: -0.01em;
+  line-height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  z-index: 1;
+}
+.logicalOperator {
+  position: absolute;
+  top: 433px;
+  left: 171px;
+  width: 1163px;
+  overflow-x: auto;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: var(--padding-20xl) var(--padding-177xl) var(--padding-26xl)
+    var(--padding-189xl);
+  box-sizing: border-box;
+  gap: var(--gap-xl);
+  max-width: 100%;
+  text-align: center;
+  font-size: var(--title3-regular-size);
+  color: var(--t02);
+  font-family: var(--font-noto-sans);
+}
+@media screen and (max-width: 450px) {
+  .div,
+  .div1,
+  .div2 {
+    font-size: var(--font-size-base);
+    line-height: 21px;
+  }
+}
