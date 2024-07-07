@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.beentime.repository.eventMapper">
+
+    <resultMap id="eventMap" type="com.example.beentime.entity.event">
+        <id property="eventId" column="event_id" />
+        <result property="title" column="title" />
+        <result property="detail" column="detail" />
+        <result property="time" column="time" />
+        <result property="eventTime" column="eventTime" />
+    </resultMap>
+
+    <resultMap id="participationMap" type="com.example.beentime.entity.participation">
+        <id property="participationId" column="participation_id" />
+        <result property="eventId" column="event_id" />
+        <result property="name" column="name" />
+        <result property="checked" column="checked" />
+        <result property="memo" column="memo" />
+        <result property="time" column="time" />
+        <association property="event" resultMap="eventMap" />
+    </resultMap>
+
+    <insert id="saveEvent">
+        insert into event_tb (title, detail, time)
+        values (#{title}, #{detail}, #{time})
+    </insert>
+
+    <insert id="participation">
+        insert into participation_tb
+        values (0, #{eventId}, #{name}, #{checked}, #{memo}, #{time})
+    </insert>
+
+    <update id="updateParticipation">
+        update
+            participation_tb
+        set
+            checked = #{checked},
+            time = #{time},
+            memo = #{memo}
+        where
+            name = #{name}
+    </update>
+
+    <update id="editEvent">
+        update
+            event_tb
+        set
+            title = #{title},
+            detail = #{detail},
+            time = #{time}
+        where
+            event_id = #{eventId}
+    </update>
+
+    <select id="getEvent" resultMap="eventMap">
+        select
+            *
+        from
+            event_tb
+        where
+            event_id = #{eventId}
+    </select>
+
+    <select id="getEventId" resultType="java.lang.Integer">
+        select
+            event_id
+        from
+            event_tb
+        where
+            title = #{title}
+        and detail = #{detail}
+    </select>
+
+    <select id="getParticipation" resultMap="participationMap">
+        select
+            pt.*,
+            et.title,
+            et.detail,
+            et.time as eventTime
+        from
+            participation_tb pt
+            left outer join event_tb et on et.event_id = pt.event_id
+        where
+            pt.event_id = #{eventId};
+    </select>
+
+    <select id="getParticipationName" resultType="java.lang.Integer">
+        select
+            count(name)
+        from
+            participation_tb
+        where
+            event_id = #{eventId}
+        and name = #{name}
+    </select>
+
+</mapper>
