@@ -5,7 +5,7 @@ import img from '../../Img/change.png';
 import img2 from '../../Img/main.png';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FaCheck, FaQuestion, FaTimes } from 'react-icons/fa'; 
-import instance from '../../api/instance';
+import { getParticipation, saveParticipation } from '../../services/supabaseService';
 
 const AttendanceListPage = () => {
     const navigate = useNavigate();
@@ -24,30 +24,41 @@ const AttendanceListPage = () => {
 
     useEffect(() => {
         const fetchData = async () => {
-            const participationList = await instance.get(`/event/participation/${id}`);
-            setTitle(participationList.data[0]?.title);
-            setDetail(participationList.data[0]?.detail);
-            setEventData(participationList.data);
+            try {
+                const participationList = await getParticipation(id);
+                console.log('Participation List:', participationList); // 데이터 확인 로그 추가
 
-            const checkedByNames = [];
-            const timeByNames = [];
+                if (participationList.length === 0) {
+                    console.warn('No participation data found.');
+                    return;
+                }
 
-            const uniqueTimes = Array.from(new Set(participationList.data.map(item => item.time))).map(time => time.replace(/\//g, ''));
-            setTimeList(Array.from(new Set(participationList.data.map(item => item.time))))
+                setTitle(participationList[0]?.event_tb?.title);
+                setDetail(participationList[0]?.event_tb?.detail);
+                setEventData(participationList);
 
-            participationList.data.forEach(item => {
-                checkedByNames.push(item.checked);
-                timeByNames.push(item.time);
-            });
-    
-            setEventData(prevData => ({
-                ...prevData,
-                checkedByNames,
-                uniqueTimes
-            }));
+                const checkedByNames = [];
+                const timeByNames = [];
+
+                const uniqueTimes = Array.from(new Set(participationList.map(item => item.time))).map(time => time.replace(/\//g, ''));
+                setTimeList(Array.from(new Set(participationList.map(item => item.time))));
+
+                participationList.forEach(item => {
+                    checkedByNames.push(item.checked);
+                    timeByNames.push(item.time);
+                });
+
+                setEventData(prevData => ({
+                    ...prevData,
+                    checkedByNames,
+                    uniqueTimes
+                }));
+            } catch (error) {
+                console.error('Error fetching participation data:', error);
+            }
         };
         fetchData();
-    }, []);
+    }, [id]);
     
     const onEditClick = () => {
         const queryData = new URLSearchParams();
@@ -61,12 +72,12 @@ const AttendanceListPage = () => {
             time: timeList,
             checked: selectedRadios,
             memo: memo,
-            eventId: eventData.eventId
+            event_id: eventData.event_id // 수정된 부분
         };
-        const response = await instance.put(`/event/participation`, data);
+        const response = await saveParticipation(eventData.event_id, attendanceName, selectedRadios, memo, timeList);
         if(response.data) {
             window.location.reload();
-        }else {
+        } else {
             alert("수정에 실패하였습니다.");
         }
     };
@@ -177,7 +188,7 @@ const AttendanceListPage = () => {
                                 <div css={S.TimeItem}>
                                     <h3>나의 빈타임</h3>
                                     <div css={S.TimeBox}>
-                                        {timeList[0].split(', ').map((date, index) => (
+                                        {timeList[0]?.split(', ').map((date, index) => (
                                             <React.Fragment key={index}>
                                                 <div key={index} css={S.Times}>
                                                     <div css={S.Date}>

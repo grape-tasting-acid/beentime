@@ -39,8 +39,8 @@ function Sharing(props) {
     const handleOnClick = () => {
         window.location.href = `${window.location.origin}/attend?eventId=${encodeURIComponent(sessionStorage.getItem('eventId'))}`;
     };
-    
-    const handleClick = (buttonLabel === '링크 복사' ? handleCopyLink : handleShareLink);
+
+    const handleClick = buttonLabel === '링크 복사' ? handleCopyLink : handleShareLink;
 
     return (
         <div css={S.Layout}>
@@ -49,7 +49,12 @@ function Sharing(props) {
             </div>
             <h1 css={S.H1}>이벤트 페이지가 완성됐어요!</h1>
             <div css={S.UrlBox}>
-                <input type="text" value={`${window.location.origin}/attend?eventId=${encodeURIComponent(sessionStorage.getItem('eventId'))}`} />
+                <input 
+                    type="text" 
+                    value={`${window.location.origin}/attend?eventId=${encodeURIComponent(sessionStorage.getItem('eventId'))}`} 
+                    onChange={() => {}}
+                    readOnly
+                />
                 <button onClick={handleClick}>{buttonLabel}</button>
             </div>
             <button css={S.Btn} onClick={handleOnClick}>이벤트 페이지 가기</button>

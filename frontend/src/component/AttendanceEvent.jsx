@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 /** @jsxImportSource @emotion/react */
 import * as S from './Style';
 import { FaCheck, FaQuestion, FaTimes } from 'react-icons/fa';
 import { useLocation, useNavigate } from 'react-router-dom';
-import instance from '../api/instance';
+import supabase from '../api/instance';
 
-const AttendanceEvent = ({ chlidren, timeList, eventData }) => {
+const AttendanceEvent = ({ children, timeList, eventData }) => {
     const navigate = useNavigate();
     const [selectedRadios, setSelectedRadios] = useState([]);
     const [attendeeName, setAttendeeName] = useState('');
@@ -13,7 +13,14 @@ const AttendanceEvent = ({ chlidren, timeList, eventData }) => {
     const location = useLocation();
     const id = new URLSearchParams(location.search).get('eventId');
 
-    console.log(id)
+    useEffect(() => {
+        if (timeList && timeList.length > 0) {
+            setSelectedRadios(new Array(timeList.length).fill(null));
+        }
+    }, [timeList]);
+
+    console.log('Event ID:', id);
+    console.log('Time List:', timeList);
 
     const onChangeRadio = (e, index) => {
         const updatedRadios = [...selectedRadios];
@@ -31,10 +38,17 @@ const AttendanceEvent = ({ chlidren, timeList, eventData }) => {
 
     const onAttendClick = async () => {
         try {
-            const participationList = await instance.get(`/event/participation/${id}`);
-            
-            const isAlreadyAttended = participationList.data.some(participation => participation.name === attendeeName);
-    
+            const { data: participationList = [], error: participationError } = await supabase
+                .from('participation_tb')
+                .select('*')
+                .eq('event_id', id);
+
+            if (participationError) {
+                throw participationError;
+            }
+
+            const isAlreadyAttended = participationList.some(participation => participation.name === attendeeName);
+
             if (isAlreadyAttended) {
                 sessionStorage.setItem('name', JSON.stringify(attendeeName));
                 alert('이미 참여 완료한 이벤트입니다.');
@@ -42,27 +56,34 @@ const AttendanceEvent = ({ chlidren, timeList, eventData }) => {
             } else {
                 const data = {
                     name: attendeeName,
-                    title: eventData.title,
                     time: timeList,
                     checked: selectedRadios,
                     memo: memo,
-                    eventId: eventData.eventId
+                    event_id: eventData.event_id // 수정된 부분
                 };
-                const response = await instance.post(`/event/participation`, data);
-                if (response.data) {
+
+                const { data: responseData, error: responseError } = await supabase
+                    .from('participation_tb')
+                    .insert([data]);
+
+                if (responseError) {
+                    throw responseError;
+                }
+
+                if (responseData) {
                     sessionStorage.setItem('name', JSON.stringify(attendeeName));
                     alert('참여 완료 하였습니다.');
                     window.location.href = `${window.location.origin}/list?eventId=${encodeURIComponent(id)}`;
                 }
             }
         } catch (error) {
-            console.error(error);
+            console.error('Error during participation:', error);
         }
     };
 
     return (
         <div css={S.Layout}>
-            {chlidren}
+            {children}
             <div css={S.Component}>
                 <div css={S.AttendBox}>
                     <div css={S.InputItem}>

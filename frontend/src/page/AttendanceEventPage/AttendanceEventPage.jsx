@@ -4,7 +4,7 @@ import * as S from '../AttendanceEventPage/Style';
 import img from '../../Img/change.png';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AttendanceEvent from '../../component/AttendanceEvent';
-import instance from '../../api/instance';
+import { getEvent, getParticipationName } from '../../services/supabaseService';
 
 const AttendanceEventPage = () => {
     const navigate = useNavigate();
@@ -17,36 +17,42 @@ const AttendanceEventPage = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                console.log(name)
-                    const response = await instance.get(`/event/${id}`);
-                    setEventData(response.data);
-                    
-                    console.log(response.data)
+                console.log('Fetching event for ID:', id);
+                const response = await getEvent(id);
 
-                    const timeList = response.data?.time.split(',').map(item => item.trim());
-                    setTimeList(timeList);
+                if (response && response.length > 0) {
+                    const event = response[0]; // 배열의 첫 번째 요소를 사용
+                    setEventData(event);
+                    console.log('Event data:', event);
 
-                    const response1 = await instance.get(`/event/participationName`, {
-                        params: {
-                            name: name,
-                            eventId: id
-                        }
-                    });
-                    if(response1.data > 0) {
-                        window.location.href = `${window.location.origin}/list?eventId=${encodeURIComponent(id)}`;
+                    if (event.time) {
+                        const parsedTime = JSON.parse(event.time); // JSON 파싱 추가
+                        console.log('Parsed time:', parsedTime);
+                        setTimeList(parsedTime);
+                    } else {
+                        console.log('No time data available.');
                     }
+                } else {
+                    console.log('No event data found.');
+                }
+
+                const response1 = await getParticipationName(id, name);
+                if (response1.data > 0) {
+                    window.location.href = `${window.location.origin}/list?eventId=${encodeURIComponent(id)}`;
+                }
             } catch (error) {
-                console.error(error);
+                console.error('Error fetching event data:', error);
             }
         };
         fetchData();
-    }, []);
+    }, [id, name]);
 
     const onEditClick = () => {
         navigate('/');
     };
 
-    console.log(eventData)
+    console.log('Event data:', eventData);
+    console.log('Time list:', timeList);
 
     return (
         <div css={S.Layout}>
@@ -62,10 +68,8 @@ const AttendanceEventPage = () => {
                     <h3>{eventData?.detail}</h3>
                 </div>
             </div>
-            <AttendanceEvent eventData={eventData} timeList={timeList}/>
-            <div css={S.BtnBox}>
-                
-            </div>
+            <AttendanceEvent eventData={eventData} timeList={timeList} />
+            <div css={S.BtnBox}></div>
         </div>
     );
 };

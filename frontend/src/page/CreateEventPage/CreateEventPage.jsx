@@ -6,20 +6,20 @@ import moment from 'moment';
 import Select from 'react-select';
 import { useLocation, useNavigate } from 'react-router-dom';
 import img from '../../Img/image.png';
-import instance from '../../api/instance';
+import { saveEvent, editEvent, getEvent } from '../../services/supabaseService';
 import queryString from 'query-string';
 
 function CreateEventPage(props) {
     const [selectedDates, setSelectedDates] = useState([]);
     const [timeSlots, setTimeSlots] = useState([]);
-    const [eventData, setEventData] = useState([]);
+    const [eventData, setEventData] = useState({ title: '', detail: '' });
     const navigate = useNavigate();
     const location = useLocation();
     const queryData = queryString.parse(location.search);
     const eventId = queryData.eventId ? JSON.parse(queryData.eventId) : null;
 
     useEffect(() => {
-        console.log(eventId);
+        console.log('Event ID:', eventId);
         if (eventId) {
             fetchEventData(eventId);
         }
@@ -27,17 +27,18 @@ function CreateEventPage(props) {
 
     const fetchEventData = async (eventId) => {
         try {
-            const response = await instance.get(`/event/${eventId}`);
-            setEventData(response.data);
-            if (response.data.time) {
-                const timeList = response.data.time.split(', ');
+            const response = await getEvent(eventId);
+            setEventData(response);
+            console.log('Fetched Event Data:', response);
+            if (response.time) {
+                const timeList = response.time.split(', ');
                 setSelectedDates(timeList.map(time => {
                     const date = time.split(' / ')[0];
                     return moment(date, 'M월 D일').toDate();
                 }));
                 setTimeSlots(timeList.map(time => {
                     const hourMinute = time.split(' / ')[1];
-                    const [hour, minute, period] = hourMinute.split(':');
+                    const [hour, minute] = hourMinute.split(':');
                     return { value: `${hour}:${minute}`, label: `${hour}:${minute}` };
                 }));
             }
@@ -51,59 +52,61 @@ function CreateEventPage(props) {
         setTimeSlots([...timeSlots, { hour: null, minute: null, period: 'PM' }]);
     };
 
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setEventData((prevData) => ({
+            ...prevData,
+            [name]: value,
+        }));
+    };
+
     const handleEventCreate = async () => {    
+        console.log('handleEventCreate called');
         const title = document.querySelector('input[placeholder="ex. 개발팀 회식, 동아리 친목회"]').value;
         const detail = document.querySelector('input[placeholder="ex. 이번 프로젝트도 화이팅입니다!"]').value;
-        
+    
         if (!title.trim()) {
             alert('이벤트 제목을 입력해주세요.');
             return;
         }
         const isValidTimeSlot = timeSlots.every(slot => slot.hour !== null && slot.minute !== null);
-
+    
         if (!isValidTimeSlot) {
             alert('시간을 선택해주세요.');
             return;
         }
-
+    
         const eventList = selectedDates.map((date, index) => {
             const formattedDate = moment(date).format('M월 D일');
             const timeSlot = timeSlots[index];
             return `${formattedDate} / ${timeSlot.label}`;
         });
-
+    
         try {
-            if(!eventId) {
-                const data = {
-                    title: title,
-                    detail: detail,
-                    time: eventList
-                }
-                const response = await instance.post(`/event`, data);
-                if(response) {
-                    sessionStorage.setItem('eventId', JSON.stringify(response.data));
+            if (!eventId) {
+                const response = await saveEvent(title, detail, eventList);
+                console.log('Event response:', response);
+                if (response) {
+                    console.log('Event created:', response);
+                    sessionStorage.setItem('eventId', response[0].event_id);
                     alert("이벤트가 생성되었습니다.");
                     navigate('/sharing');
                 }
-            }else {
-                const data = {
-                    title: title,
-                    detail: detail,
-                    time: eventList,
-                    eventId: eventId
-                }
-                const response = await instance.post(`/event/edit`, data);
-                if(response) {
-                    sessionStorage.setItem('eventId', JSON.stringify(response.data));
+            } else {
+                const response = await editEvent(eventId, title, detail, eventList);
+                console.log('Event response:', response);
+                if (response) {
+                    console.log('Event updated:', response);
+                    sessionStorage.setItem('eventId', response[0].event_id);
                     alert("이벤트가 수정되었습니다.");
                     navigate('/sharing');
                 }
             }
-        }catch(error) {
-            console.error(error);
+        } catch (error) {
+            console.error('Error creating/editing event:', error);
         }
     };
-    
+
     const tileContent = ({ date, view }) => {
         if (view === 'month') {
             const isToday = moment(date).isSame(moment(), 'day');
@@ -112,7 +115,6 @@ function CreateEventPage(props) {
     };
 
     const SelectedDateBox = ({ date, index }) => {
-
         const handleTimeChange = (selectedOption) => {
             const newTimeSlots = [...timeSlots];
             newTimeSlots[index] = selectedOption;
@@ -127,7 +129,7 @@ function CreateEventPage(props) {
             setSelectedDates(newSelectedDates);
             setTimeSlots(newTimeSlots);
         };
-    
+
         const timeOptions = [];
         for (let hour = 12; hour < 24; hour++) {
             for (let minute = 0; minute < 60; minute += 30) {
@@ -156,7 +158,7 @@ function CreateEventPage(props) {
 
         const formattedDate = moment(date);
         const formattedDateString = formattedDate.format('M월 D일');
-        let formattedDayOfWeek = moment(date).locale('ko').format('dddd일');
+        const formattedDayOfWeek = moment(date).locale('ko').format('dddd일');
         let dayOfWeekShort;
 
         switch (formattedDayOfWeek.substring(0, 3)) {
@@ -184,7 +186,7 @@ function CreateEventPage(props) {
             default:
                 dayOfWeekShort = '';
         }
-        
+
         return (
             <div css={S.SelectedDateBox}>
                 <div css={S.DateBox}>{formattedDateString} ({dayOfWeekShort})</div>
@@ -193,7 +195,7 @@ function CreateEventPage(props) {
                         options={timeOptions}
                         onChange={handleTimeChange}
                         value={timeSlots[index]}
-                        />
+                    />
                 </div>
                 <button onClick={handleDeleteDate}>X</button>
             </div>
@@ -203,17 +205,29 @@ function CreateEventPage(props) {
     return (
         <div css={S.Layout}>
             <div css={S.ImgBox}>
-                <img src={img} alt=''/>
+                <img src={img} alt='' />
             </div>
             <div css={S.Component}>
                 <h1 css={S.Title}>이벤트를 만들어보세요</h1>
                 <div css={S.Top}>
                     <h5>이벤트 제목</h5>
-                    <input type="text" placeholder='ex. 개발팀 회식, 동아리 친목회' defaultValue={eventData ? eventData.title : ''}/>
+                    <input 
+                        type="text" 
+                        name="title"
+                        placeholder='ex. 개발팀 회식, 동아리 친목회' 
+                        value={eventData.title} 
+                        onChange={handleInputChange} 
+                    />
                 </div>
                 <div css={S.Bottom}>
                     <h5>(선택) 이벤트 세부내용</h5>
-                    <input type="text" placeholder='ex. 이번 프로젝트도 화이팅입니다!' defaultValue={eventData ? eventData.detail : ''}/>
+                    <input 
+                        type="text" 
+                        name="detail"
+                        placeholder='ex. 이번 프로젝트도 화이팅입니다!' 
+                        value={eventData.detail} 
+                        onChange={handleInputChange} 
+                    />
                 </div>
                 <div css={S.CalendarLayout}>
                     <div css={S.CalendarBox}>
@@ -242,8 +256,7 @@ function CreateEventPage(props) {
                                 tileClassName={({ date }) => {
                                     const formattedDate = moment(date).startOf('day').format('YYYY-MM-DD');
                                     const today = moment().startOf('day').format('YYYY-MM-DD');
-                                    let classNames = formattedDate === today ? ' today' : '';
-                                    return classNames;
+                                    return formattedDate === today ? ' today' : '';
                                 }}
                                 tileContent={tileContent}
                                 locale="en-US"
